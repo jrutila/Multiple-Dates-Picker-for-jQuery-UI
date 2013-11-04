@@ -1,0 +1,45 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
+<link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css">
+<script type="text/javascript" src="jquery-ui.multidatespicker.js"></script>
+<script type="text/javascript">
+$(function () {
+
+    
+    $.widget("ui.dateweekpicker", {
+        _init: function() {
+            var $el = this.element;
+            this.options["showWeek"] = true;                        
+            
+            this.options["onSelect"] = this.onSelect;
+            $el.datepicker(this.options);
+            $el.on("click", ".ui-datepicker-week-col", this.selectWeek);            
+        },       
+
+        onSelect: function(a, b, c) {
+            console.log(a);
+            console.log(b);
+            console.log(c);
+        },
+
+    });
+
+    $('.weekdate-picker').multiDatesPicker( {
+        showOtherMonths: true,
+        selectOtherMonths: true,
+        firstDay: 1,
+        maxPicks: 7,
+        showWeek: true,
+    });
+});
+</script>
+</head>
+<body>
+<h1>Pick date or week</h1>
+<div class="weekdate-picker"></div>
+<button onclick="alert($('.weekdate-picker').datepicker('getDate'))">Click Me</button>
+</body>
+</html>
