@@ -6,6 +6,23 @@
  * Dual licensed under the MIT or GPL version 2 licenses.
  */
 (function( $ ){
+        $.extend($.datepicker, {
+                    // Reference the orignal function so we can override it and call it later
+            _updateDatepicker2: $.datepicker._updateDatepicker,
+
+            // Override the _inlineDatepicker method
+            _updateDatepicker: function (inst) {
+                // Call the original
+                this._updateDatepicker2(inst);
+
+                var afterUpdate = $.datepicker._get(inst, 'afterUpdate');
+
+                if (afterUpdate) {
+                    afterUpdate.apply([inst]);
+                }
+            }
+        });
+
 	$.extend($.ui, { multiDatesPicker: { version: "1.6.1" } });
 	
 	$.fn.multiDatesPicker = function(method) {
@@ -14,7 +31,19 @@
 		var today_date = new Date();
 		var day_zero = new Date(0);
 		var mdp_events = {};
-		
+
+		function setWeekLinks($el) {
+		    var dp = this[0];
+                    $el.find("td.ui-datepicker-week-col").wrapInner('<a href="#"></a>')
+                        .click(function() {
+                            var month = dp.drawMonth;
+                            var year = dp.drawYear;
+                            var week = parseInt($('a', this).html());
+                            if (week == 1 && month == 11)
+                                year++;
+			    $el.parent().multiDatesPicker("selectWeek", week, year);
+		    });
+                }
 		function removeDate(date, type) {
 			if(!type) type = 'picked';
 			date = dateConvert.call(this, date);
@@ -54,7 +83,52 @@
 			*/
 			return methods.dateConvert.call(this, date, desired_type, date_format);
 		}
-		
+		function firstDayOfWeek(week, year) {
+
+			if (year==null) {
+				year = (new Date()).getFullYear();
+			}
+
+			var date       = firstWeekOfYear(year),
+				weekTime   = weeksToMilliseconds(week),
+				targetTime = date.getTime() + weekTime;
+
+			return date.setTime(targetTime);
+
+		}
+		function weeksToMilliseconds(weeks) {
+			return 1000 * 60 * 60 * 24 * 7 * (weeks - 1);
+		}
+		function firstWeekOfYear(year) {
+			var date = new Date();
+			date = firstDayOfYear(date,year);
+			date = firstWeekday(date);
+			return date;
+		}
+		function firstDayOfYear(date, year) {
+			date.setYear(year);
+			date.setDate(1);
+			date.setMonth(0);
+			date.setHours(0);
+			date.setMinutes(0);
+			date.setSeconds(0);
+			date.setMilliseconds(0);
+			return date;
+		}
+		function firstWeekday(firstOfJanuaryDate) {
+			// 0 correspond au dimanche et 6 correspond au samedi.
+			var FIRST_DAY_OF_WEEK = 1; // Monday, according to iso8601
+			var WEEK_LENGTH = 7; // 7 days per week
+			var day = firstOfJanuaryDate.getDay();
+			day = (day === 0) ? 7 : day; // make the days monday-sunday equals to 1-7 instead of 0-6
+			var dayOffset=-day+FIRST_DAY_OF_WEEK; // dayOffset will correct the date in order to get a Monday
+			if (WEEK_LENGTH-day+1<4) {
+				// the current week has not the minimum 4 days required by iso 8601 => add one week
+				dayOffset += WEEK_LENGTH;
+			}
+			return new Date(firstOfJanuaryDate.getTime()+dayOffset*24*60*60*1000);
+		}
+
 		var methods = {
 			init : function( options ) {
 				var $this = $(this);
@@ -169,7 +243,10 @@
 							setTimeout('$("#'+inst.id+'").datepicker("show")',50);
 						}
 						if(this.multiDatesPicker.originalOnClose) this.multiDatesPicker.originalOnClose.call(this, dateText, inst);
-					}
+					},
+					afterUpdate: function() {
+						setWeekLinks.call(this, $(this[0].dpDiv));
+					},
 				};
 				
 				if(options) {
@@ -347,6 +424,18 @@
 				}
 				$(this).datepicker('refresh');
 				return removed;
+			},
+			selectWeek: function ( week, year, type ) {
+				if(!type) type = 'picked';
+				this.multiDatesPicker.dates[type] = [];
+				var fd = firstDayOfWeek(week, year);
+				for (var i = 0; i < 7; i++)
+				{
+				        var date = new Date(fd + i*(1000 * 60 * 60 * 24));
+					addDate.call(this, date, type, true);
+				}
+
+				$(this).datepicker('refresh');
 			},
 			resetDates : function ( type ) {
 				if(!type) type = 'picked';
